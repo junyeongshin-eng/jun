@@ -1,38 +1,329 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>세일즈맵 딜 히스토리 조회</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: 'Noto Sans KR', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.5;
+    }
 
-  <!-- Google Tag Manager -->
-<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-PSPQWRXR');</script>
-<!-- End Google Tag Manager -->
-  <meta charset="UTF-8">
-  <title>빈 HTML 문서 - 임베드 테스트</title>
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #f4f6f8;
+      color: #1f2933;
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 20px 35px rgba(15, 23, 42, 0.08);
+      max-width: 960px;
+      margin: 0 auto 24px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    input,
+    select,
+    button,
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 16px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+
+    button {
+      background: linear-gradient(120deg, #2563eb, #4f46e5);
+      color: #fff;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 15px 30px rgba(37, 99, 235, 0.25);
+    }
+
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    @media (min-width: 768px) {
+      .grid-cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #111827;
+      color: #f9fafb;
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      max-height: 480px;
+      overflow: auto;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(37, 99, 235, 0.1);
+      color: #1d4ed8;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .status svg {
+      width: 20px;
+      height: 20px;
+      flex: none;
+    }
+
+    .error {
+      background: rgba(220, 38, 38, 0.1);
+      border: 1px solid rgba(220, 38, 38, 0.4);
+      color: #991b1b;
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-top: 16px;
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <!-- Google Tag Manager (noscript) -->
-<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PSPQWRXR"
-height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-<!-- End Google Tag Manager (noscript) -->
-  
-  <div id="salesmap-web-form" data-web-form="https://salesmap.kr/web-form/d1b94a6d-5ec3-433d-ac5c-d49cec3b9fb2?utm_source=fb&utm_campaign=C0001">
+  <div class="card">
+    <h1>세일즈맵 딜 히스토리 조회</h1>
+    <p class="badge">🗃️ <span>Deal History API</span></p>
+    <form id="historyForm" class="grid" autocomplete="off">
+      <div>
+        <label for="apiToken">API 토큰 *</label>
+        <input type="password" id="apiToken" name="apiToken" placeholder="세일즈맵 Open API 토큰을 입력하세요" required />
+      </div>
+      <div>
+        <label for="dealId">딜 ID *</label>
+        <input type="text" id="dealId" name="dealId" placeholder="예: deal_123456789" required />
+      </div>
+      <div class="grid grid-cols-2">
+        <div>
+          <label for="limit">페이지 크기</label>
+          <input type="number" id="limit" name="limit" placeholder="기본 50 (최대 200)" min="1" max="200" />
+        </div>
+        <div>
+          <label for="cursor">커서</label>
+          <input type="text" id="cursor" name="cursor" placeholder="이전 응답의 next_cursor" />
+        </div>
+      </div>
+      <div class="grid grid-cols-2">
+        <div>
+          <label for="startDate">시작일 (UTC)</label>
+          <input type="datetime-local" id="startDate" name="startDate" />
+        </div>
+        <div>
+          <label for="endDate">종료일 (UTC)</label>
+          <input type="datetime-local" id="endDate" name="endDate" />
+        </div>
+      </div>
+      <div>
+        <label for="baseUrl">API 엔드포인트</label>
+        <input
+          type="url"
+          id="baseUrl"
+          name="baseUrl"
+          value="https://api.salesmap.kr/v2/deal/history"
+          placeholder="https://api.salesmap.kr/v2/deal/history"
+        />
+      </div>
+      <div>
+        <button id="submitBtn" type="submit">🚀 히스토리 조회</button>
+      </div>
+    </form>
+    <div id="status" class="status"></div>
+    <div id="errorBox" class="error"></div>
+  </div>
+
+  <div class="card">
+    <h2>응답 데이터</h2>
+    <pre id="responseViewer">히스토리를 조회하면 응답 JSON 이 표시됩니다.</pre>
+  </div>
+
   <script>
-    !(function (window, document) {
-      var currentScript = document.currentScript;
-      var scriptElement = document.createElement('script');
-      scriptElement.onload = function () {
-        window.SmFormSettings.loadForm();
-      };
-      scriptElement.id = 'loadFormScript';
-      scriptElement.src = 'https://salesmap.kr/web-form-loader-v4.js';
-      currentScript.parentNode.insertBefore(scriptElement, currentScript);
-    })(window, document);
+    const STORAGE_KEY_TOKEN = 'salesmap_api_token';
+    const STORAGE_KEY_CURSOR_PREFIX = 'salesmap_cursor_deal_history_';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedToken = localStorage.getItem(STORAGE_KEY_TOKEN);
+      if (savedToken) {
+        document.getElementById('apiToken').value = savedToken;
+      }
+
+      document.getElementById('dealId').addEventListener('change', loadCursor);
+      document.getElementById('historyForm').addEventListener('submit', onSubmit);
+
+      loadCursor();
+    });
+
+    function storageKeyForDeal(dealId) {
+      return `${STORAGE_KEY_CURSOR_PREFIX}${dealId || 'unknown'}`;
+    }
+
+    function loadCursor() {
+      const dealId = document.getElementById('dealId').value.trim();
+      const savedCursor = localStorage.getItem(storageKeyForDeal(dealId));
+      document.getElementById('cursor').value = savedCursor || '';
+    }
+
+    function saveCursor(dealId, cursor) {
+      if (!dealId) return;
+      const key = storageKeyForDeal(dealId);
+      if (cursor) {
+        localStorage.setItem(key, cursor);
+      } else {
+        localStorage.removeItem(key);
+      }
+    }
+
+    async function onSubmit(event) {
+      event.preventDefault();
+      resetStatus();
+
+      const token = document.getElementById('apiToken').value.trim();
+      const dealId = document.getElementById('dealId').value.trim();
+      const limit = document.getElementById('limit').value.trim();
+      const cursor = document.getElementById('cursor').value.trim();
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const baseUrl = document.getElementById('baseUrl').value.trim();
+
+      if (!token || !dealId || !baseUrl) {
+        showError('필수 입력값(API 토큰, 딜 ID, 엔드포인트)을 모두 입력하세요.');
+        return;
+      }
+
+      localStorage.setItem(STORAGE_KEY_TOKEN, token);
+
+      const params = new URLSearchParams({ deal_id: dealId });
+      if (limit) params.set('limit', limit);
+      if (cursor) params.set('cursor', cursor);
+      if (startDate) params.set('start_date', new Date(startDate).toISOString());
+      if (endDate) params.set('end_date', new Date(endDate).toISOString());
+
+      const url = `${baseUrl}?${params.toString()}`;
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ 조회 중...';
+
+      try {
+        setStatus('요청을 전송하는 중입니다...');
+        const response = await fetch(url, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const text = await response.text();
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch (parseError) {
+          throw new Error('JSON 파싱에 실패했습니다. 응답 본문을 확인하세요.');
+        }
+
+        if (!response.ok) {
+          throw new Error(json.message || json.error || `HTTP ${response.status}`);
+        }
+
+        document.getElementById('responseViewer').textContent = JSON.stringify(json, null, 2);
+        setStatus('✅ 조회가 완료되었습니다. 필요 시 next_cursor 를 사용해 이어서 조회하세요.');
+
+        if (json.next_cursor) {
+          saveCursor(dealId, json.next_cursor);
+          document.getElementById('cursor').value = json.next_cursor;
+        } else {
+          saveCursor(dealId, '');
+        }
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🚀 히스토리 조회';
+      }
+    }
+
+    function setStatus(message) {
+      const status = document.getElementById('status');
+      status.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2.5 2.5" />
+          <circle cx="12" cy="12" r="9" />
+        </svg>
+        <span>${message}</span>
+      `;
+    }
+
+    function resetStatus() {
+      document.getElementById('status').textContent = '';
+      hideError();
+    }
+
+    function showError(message) {
+      const errorBox = document.getElementById('errorBox');
+      errorBox.textContent = message;
+      errorBox.style.display = 'block';
+      setStatus('⚠️ 오류가 발생했습니다. 아래 메시지를 확인하세요.');
+    }
+
+    function hideError() {
+      const errorBox = document.getElementById('errorBox');
+      errorBox.style.display = 'none';
+      errorBox.textContent = '';
+    }
   </script>
-</div>
-
-
 </body>
 </html>
