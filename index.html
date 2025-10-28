@@ -109,7 +109,6 @@
           if (startDate) params.set('start_date', new Date(startDate).toISOString());
           if (cursor) params.set('cursor', cursor);
 
-          // URL을 Base URL과 파라미터로 조합
           const url = `${baseUrl}?${params.toString()}`;
           
           const response = await fetch(url, {
@@ -120,12 +119,15 @@
             cache: 'no-store',
           });
 
-          const json = await response.json();
+          // <<<--- [수정됨] 응답이 JSON이 아닐 수도 있으니, 먼저 텍스트로 받습니다.
+          const responseText = await response.text();
 
           if (!response.ok) {
-            // 서버 에러 메시지가 있으면 그것을 사용, 없으면 HTTP 상태 코드로 에러 생성
-            throw new Error(json.message || `HTTP ${response.status} 오류가 발생했습니다.`);
+            // 응답 실패 시, 서버가 보낸 텍스트를 그대로 에러 메시지로 사용합니다.
+            throw new Error(`HTTP ${response.status} 오류: ${responseText}`);
           }
+          
+          const json = JSON.parse(responseText); // 텍스트를 JSON으로 변환
           
           const data = json.data || {};
           const historyList = data.dealHistoryList || [];
@@ -144,14 +146,19 @@
           page++;
         }
       } catch (error) {
+        // <<<--- [가장 중요] 에러의 모든 정보를 콘솔에 출력합니다.
+        console.error("!!! 전체 에러 객체:", error); 
+        
+        // 화면에는 더 자세한 메시지를 보여줍니다.
         showError(error.message);
+
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = '🚀 전체 히스토리 조회';
       }
     }
     
-    // UI Helper Functions
+    // --- UI Helper Functions (이 부분은 수정 없음) ---
     function setStatus(message) {
       const status = document.getElementById('status');
       status.innerHTML = `<span>${message}</span>`;
