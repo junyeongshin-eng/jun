@@ -1,187 +1,39 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>세일즈맵 전체 딜 히스토리 조회</title>
-  <style>
-    :root { color-scheme: light dark; font-family: 'Noto Sans KR', system-ui, sans-serif; line-height: 1.5; }
-    body { margin: 0; padding: 24px; background: #f4f6f8; color: #1f2933; }
-    h1 { margin-top: 0; }
-    .card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 20px 35px rgba(15, 23, 42, 0.08); max-width: 960px; margin: 0 auto 24px; }
-    label { display: block; font-weight: 600; margin-bottom: 4px; }
-    input, button { width: 100%; box-sizing: border-box; font-size: 16px; padding: 10px 12px; border-radius: 8px; border: 1px solid #d1d5db; }
-    input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2); }
-    button { background: linear-gradient(120deg, #2563eb, #4f46e5); color: #fff; border: none; font-weight: 600; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; }
-    button:hover { transform: translateY(-1px); box-shadow: 0 15px 30px rgba(37, 99, 235, 0.25); }
-    button:disabled { background: #9ca3af; cursor: not-allowed; box-shadow: none; }
-    .grid { display: grid; gap: 16px; }
-    @media (min-width: 768px) { .grid-cols-2 { grid-template-columns: repeat(2, 1fr); } }
-    pre { white-space: pre-wrap; word-break: break-word; background: #111827; color: #f9fafb; padding: 16px; border-radius: 12px; font-size: 14px; max-height: 600px; overflow: auto; }
-    .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(37, 99, 235, 0.1); color: #1d4ed8; padding: 6px 12px; border-radius: 999px; font-size: 14px; font-weight: 600; }
-    .status { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
-    .error { background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.4); color: #991b1b; padding: 12px 16px; border-radius: 10px; margin-top: 16px; display: none; }
-  </style>
+  <!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '694545429907364');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=694545429907364&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 </head>
 <body>
-  <div class="card">
-    <h1>세일즈맵 전체 딜 히스토리 조회</h1>
-    <p class="badge">🗃️ <span>All Deal History API (Auto Pagination)</span></p>
-    <form id="historyForm" class="grid" autocomplete="off">
-      <div>
-        <label for="apiToken">API 토큰 *</label>
-        <input type="password" id="apiToken" name="apiToken" placeholder="세일즈맵 Open API 토큰을 입력하세요" required />
-      </div>
-      <div class="grid grid-cols-2">
-        <div>
-          <label for="limit">페이지 크기</label>
-          <input type="number" id="limit" name="limit" placeholder="기본 50 (최대 200)" min="1" max="200" />
-        </div>
-        <div>
-          <label for="startDate">시작일 (UTC)</label>
-          <input type="datetime-local" id="startDate" name="startDate" />
-        </div>
-      </div>
-      <div>
-        <label for="baseUrl">API 엔드포인트</label>
-        <input
-          type="url"
-          id="baseUrl"
-          name="baseUrl"
-          value="https://salesmap.kr/api/v2/deal/history"
-          required
-        />
-      </div>
-      <div>
-        <button id="submitBtn" type="submit">🚀 전체 히스토리 조회</button>
-      </div>
-    </form>
-    <div id="status" class="status"></div>
-    <div id="errorBox" class="error"></div>
-  </div>
-
-  <div class="card">
-    <h2>응답 데이터 (누적)</h2>
-    <pre id="responseViewer">히스토리를 조회하면 모든 응답 JSON 이 누적되어 표시됩니다.</pre>
-  </div>
-
+  <div id="salesmap-web-form" data-web-form="https://salesmap.kr/web-form/e56bfdc8-eb70-421b-b3a9-78a91048aca1">
   <script>
-    const STORAGE_KEY_TOKEN = 'salesmap_api_token_all_history';
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const savedToken = localStorage.getItem(STORAGE_KEY_TOKEN);
-      if (savedToken) {
-        document.getElementById('apiToken').value = savedToken;
-      }
-      document.getElementById('historyForm').addEventListener('submit', onSubmit);
-    });
-
-    async function onSubmit(event) {
-      event.preventDefault();
-      resetStatus();
-
-      const token = document.getElementById('apiToken').value.trim();
-      const limit = document.getElementById('limit').value.trim();
-      const startDate = document.getElementById('startDate').value;
-      const baseUrl = document.getElementById('baseUrl').value.trim();
-
-      if (!token || !baseUrl) {
-        showError('필수 입력값(API 토큰, 엔드포인트)을 모두 입력하세요.');
-        return;
-      }
-
-      localStorage.setItem(STORAGE_KEY_TOKEN, token);
-
-      const submitBtn = document.getElementById('submitBtn');
-      submitBtn.disabled = true;
-      
-      const allHistory = [];
-      let cursor = null;
-      let page = 1;
-
-      try {
-        while (true) {
-          submitBtn.textContent = `⏳ 조회 중 (페이지 ${page})...`;
-          setStatus(`페이지 ${page} 데이터를 가져오는 중입니다...`);
-
-          const params = new URLSearchParams();
-          if (limit) params.set('limit', limit);
-          if (startDate) params.set('start_date', new Date(startDate).toISOString());
-          if (cursor) params.set('cursor', cursor);
-
-          const url = `${baseUrl}?${params.toString()}`;
-          
-          const response = await fetch(url, {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            cache: 'no-store',
-          });
-
-          // <<<--- [수정됨] 응답이 JSON이 아닐 수도 있으니, 먼저 텍스트로 받습니다.
-          const responseText = await response.text();
-
-          if (!response.ok) {
-            // 응답 실패 시, 서버가 보낸 텍스트를 그대로 에러 메시지로 사용합니다.
-            throw new Error(`HTTP ${response.status} 오류: ${responseText}`);
-          }
-          
-          const json = JSON.parse(responseText); // 텍스트를 JSON으로 변환
-          
-          const data = json.data || {};
-          const historyList = data.dealHistoryList || [];
-
-          if (historyList.length > 0) {
-            allHistory.push(...historyList);
-          }
-          
-          document.getElementById('responseViewer').textContent = JSON.stringify(allHistory, null, 2);
-          
-          cursor = data.next_cursor;
-          if (!cursor) {
-            setStatus(`✅ 총 ${allHistory.length}개의 히스토리를 성공적으로 조회했습니다.`);
-            break;
-          }
-          page++;
-        }
-      } catch (error) {
-        // <<<--- [가장 중요] 에러의 모든 정보를 콘솔에 출력합니다.
-        console.error("!!! 전체 에러 객체:", error); 
-        
-        // 화면에는 더 자세한 메시지를 보여줍니다.
-        showError(error.message);
-
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '🚀 전체 히스토리 조회';
-      }
-    }
-    
-    // --- UI Helper Functions (이 부분은 수정 없음) ---
-    function setStatus(message) {
-      const status = document.getElementById('status');
-      status.innerHTML = `<span>${message}</span>`;
-    }
-
-    function resetStatus() {
-      document.getElementById('status').innerHTML = '';
-      hideError();
-      document.getElementById('responseViewer').textContent = '히스토리를 조회하면 모든 응답 JSON 이 누적되어 표시됩니다.';
-    }
-
-    function showError(message) {
-      const errorBox = document.getElementById('errorBox');
-      errorBox.textContent = `오류: ${message}`;
-      errorBox.style.display = 'block';
-      setStatus('⚠️ 조회 중 문제가 발생했습니다.');
-    }
-
-    function hideError() {
-      const errorBox = document.getElementById('errorBox');
-      errorBox.style.display = 'none';
-      errorBox.textContent = '';
-    }
+    !(function (window, document) {
+      var currentScript = document.currentScript;
+      var scriptElement = document.createElement('script');
+      scriptElement.onload = function () {
+        window.SmFormSettings.loadForm();
+      };
+      scriptElement.id = 'loadFormScript';
+      scriptElement.src = 'https://salesmap.kr/web-form-loader-v4.js';
+      currentScript.parentNode.insertBefore(scriptElement, currentScript);
+    })(window, document);
   </script>
+</div>
+
 </body>
 </html>
